@@ -2,10 +2,10 @@
 
 #include <vector>
 #include <map>
-#include <vector>
 #include <string>
-#include <xstring>
 #include <winternl.h>
+#include <unicorn/unicorn.h>
+#include <unicorn/x86.h>
 
 using namespace std;
 
@@ -63,7 +63,7 @@ private:
 	bool InitTibPeb_PebLdrdata();
 	uint64_t InitSysDLL();
 	bool MapInsertIat(
-		IMAGE_IMPORT_DESCRIPTOR * pImportTabe,
+		PIMAGE_IMPORT_DESCRIPTOR pImportTabe,
 		DWORD64 dwMoudle,
 		uint64_t mapBase,
 		ModDLL* mod
@@ -80,7 +80,7 @@ private:
 	BOOL RepairReloCation(
 		PIMAGE_DOS_HEADER m_studBase);
 	void RepairTheIAT(
-		IMAGE_IMPORT_DESCRIPTOR * pImportTabe,
+		PIMAGE_IMPORT_DESCRIPTOR pImportTabe,
 		DWORD64 dwMoudle);
 	bool SamplePeMapImage();
 

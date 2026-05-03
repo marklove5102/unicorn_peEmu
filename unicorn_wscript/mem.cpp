@@ -4,26 +4,23 @@
 #include <list>
 std::list<LPVOID> g_MemList;
 
-// allocate mem
-void* ExAllocMemory(const int len)
+void* ExAllocMemory(size_t len)
 {
 	if (len)
 	{
-		//if (m_pBuffer)
-		//	VirtualFree(m_pBuffer, 0, MEM_RELEASE);
-		auto m_pBuffer = VirtualAlloc(NULL, len, MEM_COMMIT, PAGE_READWRITE);
+		auto m_pBuffer = VirtualAlloc(NULL, len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		if (m_pBuffer)
 			g_MemList.push_back(m_pBuffer);
 		else
 			return NULL;
 		return m_pBuffer;
-		// m_cbSize = len;
 	}
 	return NULL;
 }
 
-// allocate heap
-void* ExAllocHeap(const int len)
+void* ExAllocHeap(size_t len)
 {
-	return HeapAlloc(NULL, PAGE_READWRITE, len);
+	if (!len)
+		return NULL;
+	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, len);
 }

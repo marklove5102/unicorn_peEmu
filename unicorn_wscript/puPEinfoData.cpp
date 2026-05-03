@@ -38,8 +38,8 @@ BOOL PuPEInfo::prOpenFile(
 )
 {
 	m_strNamePath = PathName;
-	HANDLE hFile = CreateFile(PathName, GENERIC_READ | GENERIC_WRITE, FALSE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if ((int)hFile <= 0){ 
+	HANDLE hFile = CreateFile(PathName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
 		return FALSE; 
 	}
 	_hMapping = CreateFileMappingW(hFile, NULL, SEC_IMAGE | PAGE_READONLY, 0, 0, NULL);
@@ -55,15 +55,30 @@ BOOL PuPEInfo::prOpenFile(
 			PuPEInfo::m_pFileBase = MapViewOfFile(_hMapping, FILE_MAP_READ, 0, 0, 0);
 	}
 	if (!PuPEInfo::m_pFileBase)
+	{
+		CloseHandle(hFile);
+		if (_hMapping)
+			CloseHandle(_hMapping);
 		return false;
+	}
 	PIMAGE_DOS_HEADER pDosHander = (PIMAGE_DOS_HEADER)PuPEInfo::m_pFileBase;
 	PIMAGE_NT_HEADERS pHeadres = (PIMAGE_NT_HEADERS)(pDosHander->e_lfanew + (DWORD64)m_pFileBase);
 	m_pNtHeader = pHeadres;
 	if (!pHeadres)
+	{
+		UnmapViewOfFile(PuPEInfo::m_pFileBase);
+		CloseHandle(hFile);
+		CloseHandle(_hMapping);
 		return false;
+	}
 	// if pe ? true : false
 	if (!IsPEFile())
+	{
+		UnmapViewOfFile(PuPEInfo::m_pFileBase);
+		CloseHandle(hFile);
+		CloseHandle(_hMapping);
 		return false;
+	}
 	if (pHeadres->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
 		m_x86x64flag = true;
 	else

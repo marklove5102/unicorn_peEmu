@@ -1,4 +1,4 @@
-#include "../unicorn/include/unicorn/unicorn.h"
+#include <unicorn/unicorn.h>
 
 #include "emuwindows.h"
 

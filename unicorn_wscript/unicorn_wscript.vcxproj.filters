@@ -33,7 +33,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows.cpp">
+    <ClCompile Include="emuwindows.cpp">
       <Filter>os\windows</Filter>
     </ClCompile>
     <ClCompile Include="PeEmu.cpp">
@@ -48,9 +48,12 @@
     <ClCompile Include="Capstone.cpp">
       <Filter>capstone</Filter>
     </ClCompile>
+    <ClCompile Include="SimplePeEmu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="windows.h">
+    <ClInclude Include="emuwindows.h">
       <Filter>os\windows</Filter>
     </ClInclude>
     <ClInclude Include="PeEmu.h">
@@ -67,6 +70,9 @@
     </ClInclude>
     <ClInclude Include="Capstone.h">
       <Filter>capstone</Filter>
+    </ClInclude>
+    <ClInclude Include="SimplePeEmu.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

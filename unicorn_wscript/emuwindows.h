@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <unicorn/unicorn.h>
 
 class EmuOsWindows
 {

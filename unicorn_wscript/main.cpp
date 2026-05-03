@@ -1,31 +1,37 @@
-#include "../unicorn/include/unicorn/unicorn.h"
+#include <unicorn/unicorn.h>
 
-#include <xstring>
-using namespace std;
-#include "PeEmu.h"
+#include <cstdio>
+#include <iostream>
+#include <string>
 
-int main(int argv, char** argc)
+#include "SimplePeEmu.h"
+
+int wmain(int argc, wchar_t** argv)
 {
-	// Check file & other
-	wstring wSampleName;
-	wchar_t bufname[MAX_PATH] = { 0, };
-	printf("please samlple path: ");
-	scanf("%ws", bufname);
-	wSampleName = bufname;
-	if (0 >= wSampleName.length())
-		return 0;
+    std::wstring wSampleName;
+    if (argc >= 2)
+    {
+        wSampleName = argv[1];
+    }
+    else
+    {
+        wchar_t bufname[MAX_PATH] = { 0, };
+        wprintf(L"please sample path: ");
+        if (wscanf_s(L"%259ls", bufname, static_cast<unsigned>(_countof(bufname))) != 1)
+            return 0;
 
-	// x86 or x64
-	// bool x8664flag = false;
+        wSampleName = bufname;
+    }
 
-	// Init PeEmu
-	PeEmu pe(wSampleName);
-	if (!pe.puGetInitstatus())
-		return 0;
-	pe.puInitEmu();
+    if (wSampleName.empty())
+        return 0;
 
-	// Run PeEmu
-	pe.puRun();
+    SimplePeEmu emu;
+    if (!emu.Load(wSampleName) || !emu.Run())
+    {
+        std::cerr << "[emu] " << emu.LastError() << std::endl;
+        return 1;
+    }
 
-	return 0;
+    return 0;
 }

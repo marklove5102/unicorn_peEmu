@@ -1,5 +1,5 @@
-﻿#include "../unicorn/include/unicorn/unicorn.h"
-#include "../unicorn/include/unicorn/x86.h"
+﻿#include <unicorn/unicorn.h>
+#include <unicorn/x86.h>
 
 #include "mem.h"
 #include "PeEmu.h"
@@ -105,12 +105,15 @@ bool PeEmu::SamplePeMapImage(
 		NULL, OPEN_EXISTING, 0, NULL
 	);
 
-	if (!hfile)
+	if (hfile == INVALID_HANDLE_VALUE)
 		return false;
 
 	DWORD dwDllSize = GetFileSize(hfile, NULL);
-	if (0 >= dwDllSize)
+	if (dwDllSize == INVALID_FILE_SIZE || dwDllSize == 0)
+	{
+		CloseHandle(hfile);
 		return false;
+	}
 
 	MapBaseaddr = (uint64_t)ExAllocMemory(dwDllSize);
 	if (!MapBaseaddr)
@@ -119,7 +122,10 @@ bool PeEmu::SamplePeMapImage(
 	DWORD rdSize = 0;
 	ReadFile(hfile, (LPVOID)MapBaseaddr, dwDllSize, &rdSize, NULL);
 	if (rdSize != dwDllSize)
+	{
+		CloseHandle(hfile);
 		return false;
+	}
 	CloseHandle(hfile);
 
 	PIMAGE_DOS_HEADER DosHeader = (PIMAGE_DOS_HEADER)MapBaseaddr;
@@ -156,7 +162,7 @@ bool PeEmu::SamplePeMapImage(
 		RtlCopyMemory(chDestMem, chSrcMem, dwSizeOfRawData);
 		pSection++;
 	}
-	VirtualFree((LPVOID)MapBaseaddr, m_ImageSize, 0);
+	VirtualFree((LPVOID)MapBaseaddr, 0, MEM_RELEASE);
 
 	PIMAGE_DOS_HEADER mapDosHeader = (PIMAGE_DOS_HEADER)ImageBaseMapaddr;
 	IMAGE_NT_HEADERS* mapNtHeader = (IMAGE_NT_HEADERS*)((BYTE*)mapDosHeader + mapDosHeader->e_lfanew);
@@ -171,7 +177,7 @@ bool PeEmu::SamplePeMapImage(
 	m_oep = mapNtHeader->OptionalHeader.ImageBase + mapNtHeader->OptionalHeader.AddressOfEntryPoint;
 
 	// map
-	uc_mem_map(m_uc, m_ImageBase, m_ImageSize, UC_PROT_EXEC | UC_PROT_READ | UC_PROT_EXEC);
+	uc_mem_map(m_uc, m_ImageBase, m_ImageSize, UC_PROT_EXEC | UC_PROT_READ | UC_PROT_WRITE);
 	uc_mem_write(m_uc, m_ImageBase, (void *)m_ImageBase, m_ImageSize);
 
 	return true;
@@ -228,7 +234,7 @@ bool PeEmu::prInitEmu(
 	uc_reg_write(m_uc, UC_X86_REG_RBP, &m_InitReg.Rbp);
 	uc_reg_write(m_uc, UC_X86_REG_RSP, &m_InitReg.Rsp);
 
-	return 0;
+	return true;
 }
 
 static void init_descriptor64(
@@ -410,13 +416,11 @@ uint64_t PeEmu::MyGetProcess(
 
 	// 函数名个数
 	DWORD dwNumberofName = pExport->NumberOfNames;
-	// 函数个数
-	DWORD dwnumberoffun = pExport->NumberOfFunctions;
 	uint64_t  eat = (uint64_t)pExport->AddressOfFunctions + dwMoudle;
 	uint64_t   eot = (uint64_t)pExport->AddressOfNameOrdinals + dwMoudle;
 	uint64_t ent = (uint64_t)pExport->AddressOfNames + dwMoudle;
 
-	for (int i = 0; i < dwNumberofName; ++i)
+	for (DWORD i = 0; i < dwNumberofName; ++i)
 	{
 		DWORD dwNameoffset = *(DWORD *)(ent + (i * 4));
 		if (!dwNameoffset)
@@ -446,7 +450,7 @@ uint64_t PeEmu::MyGetProcess(
 }
 
 bool PeEmu::MapInsertIat(
-	IMAGE_IMPORT_DESCRIPTOR * pImportTabe,
+	PIMAGE_IMPORT_DESCRIPTOR pImportTabe,
 	DWORD64 dwMoudle,
 	uint64_t mapBase,
 	ModDLL* mod
@@ -512,7 +516,7 @@ bool PeEmu::MapInsertIat(
 		Mapvaaddr = mapBase + (threadidbase - (uint64_t)hmod);
 		g_dll_StringInt_Map["GetCurrentThreadId"] = Mapvaaddr;
 	}
-	return 0;
+	return true;
 }
 
 bool PeEmu::MapRelocation(
@@ -571,12 +575,15 @@ uint64_t PeEmu::InitSysDLL(
 			NULL, OPEN_EXISTING, 0, NULL
 		);
 
-		if (!hfile)
+		if (hfile == INVALID_HANDLE_VALUE)
 			return false;
 
 		DWORD dwDllSize = GetFileSize(hfile, NULL);
-		if (0 >= dwDllSize)
+		if (dwDllSize == INVALID_FILE_SIZE || dwDllSize == 0)
+		{
+			CloseHandle(hfile);
 			return false;
+		}
 
 		MapBaseaddr = (uint64_t)ExAllocMemory(dwDllSize);
 		if (!MapBaseaddr)
@@ -585,7 +592,10 @@ uint64_t PeEmu::InitSysDLL(
 		DWORD rdSize = 0;
 		ReadFile(hfile, (LPVOID)MapBaseaddr, dwDllSize, &rdSize, NULL);
 		if (rdSize != dwDllSize)
+		{
+			CloseHandle(hfile);
 			return false;
+		}
 		CloseHandle(hfile);
 
 		PIMAGE_DOS_HEADER DosHeader = (PIMAGE_DOS_HEADER)MapBaseaddr;
@@ -663,8 +673,8 @@ uint64_t PeEmu::InitSysDLL(
 		else
 			MudllMapAddr = (((MudllMapAddr / 0x1000) + 1) * 0x1000);
 
-		VirtualFree((LPVOID)MapBaseaddr, dwDllSize, 0);
-		VirtualFree(ImageBaseMapaddr, moddll.ImageSize, 0);
+		VirtualFree((LPVOID)MapBaseaddr, 0, MEM_RELEASE);
+		VirtualFree(ImageBaseMapaddr, 0, MEM_RELEASE);
 
 		// insert Ldr_data_list : m_ptrldrdat_entry_addr(peb_ldr_data)
 		// error
@@ -755,7 +765,7 @@ BOOL PeEmu::RepairReloCation(
 }
 
 void PeEmu::RepairTheIAT(
-	IMAGE_IMPORT_DESCRIPTOR * pImportTabe,
+	PIMAGE_IMPORT_DESCRIPTOR pImportTabe,
 	DWORD64 dwMoudle
 )
 {
@@ -967,7 +977,7 @@ bool PeEmu::RegisterEmuWinApi(
 bool PeEmu::prRun(
 )
 {
-	uc_hook trace, trace1, trace2, trace3;
+	uc_hook trace1 = 0, trace2 = 0, trace3 = 0;
 
 	// Monitor opencode & api handle
 	// uc_hook_add(m_uc, &trace, UC_HOOK_BLOCK, 
@@ -1006,9 +1016,10 @@ bool PeEmu::prRun(
 	uc_hook_del(m_uc, trace3);
 
 	uc_close(m_uc);
+	m_uc = nullptr;
 	m_CapAnasm.Close();
 
 	// Unmap sample mem
 
-	return 0;
+	return true;
 }

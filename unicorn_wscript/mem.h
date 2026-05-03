@@ -1,5 +1,7 @@
 #pragma once
 
-void* ExAllocMemory(const int len);
+#include <cstddef>
 
-void* ExAllocHeap(const int len);
+void* ExAllocMemory(size_t len);
+
+void* ExAllocHeap(size_t len);

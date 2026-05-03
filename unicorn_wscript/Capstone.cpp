@@ -2,10 +2,12 @@
 #include <Windows.h>
 
 #include <iostream>
+#include <vector>
 using std::cout; 
 using std::endl;
 
 Capstone::Capstone()
+	: Handle(0), err(CS_ERR_OK), pInsn(nullptr), OptMem{}
 {
 
 }
@@ -32,27 +34,27 @@ void Capstone::InitCapstone(
 }
 
 void Capstone::ShowAssembly(
-	const __int64 mapexecripaddr,
+	uint64_t mapexecripaddr,
 	const void* pAddr, 
-	int nLen
+	size_t nLen
 )
 {
-	BYTE* pOpCode = (BYTE *)malloc(nLen * 16);
-	memset(pOpCode, 0, (sizeof(BYTE) * 16 * nLen) );
-	SIZE_T read = 0;			
+	if (!Handle || !pAddr || nLen == 0)
+		return;
 
 	cs_insn* ins = nullptr;
+	std::vector<BYTE> opCode(nLen * 16);
 
-	RtlMoveMemory(pOpCode, pAddr, nLen * 16);
-	// SIZE_T dwCount = 0;
-	// ReadProcessMemory(NULL, pAddr, pOpCode, nLen * 16, &dwCount);
+	RtlMoveMemory(opCode.data(), pAddr, opCode.size());
 
-	int count = cs_disasm(Handle, (uint8_t*)pOpCode, nLen * 16, (uint64_t)pAddr, 0, &ins);
+	size_t count = cs_disasm(Handle, opCode.data(), opCode.size(), mapexecripaddr, nLen, &ins);
+	if (count == 0 || !ins)
+		return;
 
-	for (int i = 0; i < nLen; ++i)
+	for (size_t i = 0; i < count; ++i)
 	{
 		// printf("%08X\t", ins[i].address);
-		printf("0x%I64X\t", mapexecripaddr);
+		printf("0x%I64X\t", ins[i].address);
 		for (uint16_t j = 0; j < 16; ++j)
 		{
 			if (j < ins[i].size)
@@ -65,7 +67,6 @@ void Capstone::ShowAssembly(
 		cout << ins[i].op_str << endl;  
 	}
 	printf("\n");
-	delete[] pOpCode;
 	cs_free(ins, count);
 }
 

@@ -1,13 +1,9 @@
 #pragma once
 #ifndef _CAPSTONE_H_
 #define _CAPSTONE_H_
-#include "../capstone/include/capstone.h"
-
-#ifdef _WIN64
-#pragma comment(lib,"..//capstone//lib//capstone_x64.lib")
-#else
-#pragma comment(lib,"capstone\\lib\\capstone_x86.lib")
-#endif
+#include <cstddef>
+#include <cstdint>
+#include <capstone.h>
 
 class Capstone
 {
@@ -18,7 +14,7 @@ public:
 public:
 
 	void InitCapstone();
-	void ShowAssembly(const __int64 mapexecripaddr, const void* pAddr, int nLen);
+	void ShowAssembly(uint64_t mapexecripaddr, const void* pAddr, size_t nLen);
 	void Close();
 
 private:
